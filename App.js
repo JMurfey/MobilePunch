@@ -23,11 +23,12 @@ export default function App() {
     setShowCamera(true);
   };
   const handlePictureTaken = (info) => { 
-    console.log('handlePictureTaken: ', info);
+    console.log('handlePictureTaken: ');
     setPictureData(info);
     setShowCamera(false);
     setShowQRScanner(true);
   };
+
   const handleBarCodeScanned = (data, success) => { 
     console.log('handleBarCodeScanned: ', data);
     setShowQRScanner(false);
@@ -39,6 +40,7 @@ export default function App() {
       setShowCamera(true);
     }
   };
+
   const handleCreatePunchDone = () => {
     setShowCamera(true);
     setShowCreatePunch(false);
@@ -64,8 +66,8 @@ export default function App() {
   }
 
   if (showCreatePunch) {
-    console.log(pictureData);
-    console.log(qrCodeData);
+    //console.log(pictureData);
+    //console.log(qrCodeData);
     return (
       <CreatePunch 
         pictureData={pictureData} 

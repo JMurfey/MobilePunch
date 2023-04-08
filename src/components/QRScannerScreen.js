@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { BarCodeScanner } from 'expo-barcode-scanner';
+import WaitOverlay from './WaitOverlay';
 
 export default function QRScannerScreen({ onQRCodeScanned }) {
   console.log("QRScannerScreen");
   const [hasPermission, setHasPermission] = useState(null);
-  //const [scanned, setScanned] = useState(false);
   const timerRef = useRef(null);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   console.log("Starting!");
   console.log("QRScannerScreen: ", onQRCodeScanned);
   console.log("hasPermission: ", hasPermission);
-  //console.log("scanned: ", scanned);
   console.log("timerRef: ", timerRef);
 
   useEffect(() => {
@@ -23,6 +23,7 @@ export default function QRScannerScreen({ onQRCodeScanned }) {
   }, []);
 
   const handleBarCodeScanned = ({ type, data }) => {
+    setIsWaiting(true);
     console.log(`Bar code with type ${type} and data ${data} has been scanned!`);
     //setScanned(true);
     clearTimeout(timerRef.current);
@@ -32,7 +33,6 @@ export default function QRScannerScreen({ onQRCodeScanned }) {
   const startTimer = () => {
     timerRef.current = setTimeout(() => {
       console.log('Timer expired');
-      //setScanned(true);
       onQRCodeScanned(null, false);
     }, 30000);
   };
@@ -40,11 +40,14 @@ export default function QRScannerScreen({ onQRCodeScanned }) {
   if (hasPermission === null) {
     return <Text>Requesting for camera permission</Text>;
   }
-  if (hasPermission === false) {
+  else if (hasPermission === false) {
     return <Text>No access to camera</Text>;
   }
+  else {
+    startTimer();
+    
+  }
 
-  startTimer();
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -73,6 +76,7 @@ export default function QRScannerScreen({ onQRCodeScanned }) {
       <View style={styles.bottomContainer}>
         <Text style={styles.text}>Scan a QR code</Text>
       </View>
+      <WaitOverlay isWaiting={isWaiting} />
     </View>
   );
   

@@ -3,8 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Button } from 're
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, CameraType } from 'expo-camera';
 import * as ImageManipulator from 'expo-image-manipulator';
-
-
+import WaitOverlay from './WaitOverlay';
 
 
 export default function CameraScreen({ onPictureTaken }) {
@@ -14,6 +13,7 @@ export default function CameraScreen({ onPictureTaken }) {
   const [location, setLocation] = useState(null);
   const [type, setType] = useState(CameraType.front);
   const handleCameraReady = useCallback(() => setIsCameraInitialized(true), []);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   async function resizeImage(pictureData) {
     // Get the image URI
@@ -30,7 +30,8 @@ export default function CameraScreen({ onPictureTaken }) {
     const resizedImage = await ImageManipulator.manipulateAsync(uri, [
       { resize: { width: newWidth, height: newHeight}}
     ]);
-    console.log("resizedImage: ", resizedImage);
+    console.log("resizedImage: ", pictureData.photo.uri);
+    console.log("resizedImage: ", resizedImage.uri);
 
   // Get the base64 representation of the resized image
   const base64Image = await ImageManipulator.manipulateAsync(
@@ -39,8 +40,7 @@ export default function CameraScreen({ onPictureTaken }) {
     { base64: true }
   );
 
-
-
+    console.log(base64Image);
       // Return a new object containing the resized image data and its base64 representation
     return {
       location: pictureData.location,
@@ -55,6 +55,7 @@ export default function CameraScreen({ onPictureTaken }) {
   
   const handleTakePicture = async () => {
     if (isCameraInitialized) {
+      setIsWaiting(true);
       if (cameraRef.current) {
         try {
           const photo = await cameraRef.current.takePictureAsync();
@@ -93,6 +94,10 @@ export default function CameraScreen({ onPictureTaken }) {
     if (permission && permission.granted) {
       setIsCameraInitialized(true);
     }
+    else {
+      console.log('permission', permission);
+      console.log('Permission to access camera was denied');
+    }
   }, [permission]);
 
   if (!permission) {
@@ -104,12 +109,14 @@ export default function CameraScreen({ onPictureTaken }) {
     // Camera permissions are not granted yet
     return (
       <View style={styles.container}>
-        <Text style={{ textAlign: 'center' }}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
+        <Text style={styles.text}>We need your permission to show the camera</Text>
+        <TouchableOpacity style={styles.button} onPress={() => requestPermission()}>
+          <Text style={styles.buttonText}>Grant Permission</Text>
+        </TouchableOpacity>
       </View>
     );
   }
-
+  
   return (
     <View style={styles.cameraContainer}>
       <Camera
@@ -123,6 +130,7 @@ export default function CameraScreen({ onPictureTaken }) {
           <View style={styles.cameraButtonInner} />
         </TouchableOpacity>
       </View>
+      <WaitOverlay visible={isWaiting} />
     </View>
   );
 }
@@ -130,33 +138,42 @@ export default function CameraScreen({ onPictureTaken }) {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
+      marginBottom: 20,      
     },
     cameraContainer: {
       flex: 1,
       flexDirection: 'column',
       backgroundColor: 'black',
+      alignSelf: 'center',      
     },
     cameraPreview: {
       flex: 1,
       justifyContent: 'flex-end',
       alignItems: 'center',
-      height: Dimensions.get('window').height,
-      width: Dimensions.get('window').width,
+      height: Dimensions.get('window').height - 100, // subtracting 100 to make space for the button container
+      width: Dimensions.get('window').width, // reducing the width by 40 for a border
+      marginTop: 100, // adding a margin of 100 to the camera preview
+      borderRadius: 10, // adding rounded corners to the camera preview
+      borderWidth: 2, // adding a border to the camera preview
+      borderColor: 'black', // setting the border color to white
+      overflow: 'hidden', // hiding any content that extends beyond the rounded corners
     },
     cameraButtonContainer: {
       position: 'absolute',
-      bottom: 20,
+      bottom: 0,
       left: 0,
       right: 0,
       alignItems: 'center',
       justifyContent: 'center',
+      height: 100, // setting the height for the button container
+      backgroundColor: 'rgba(0, 0, 0, 0.6)', // setting a semi-transparent black background for the button container
     },
     cameraButton: {
       width: 70,
       height: 70,
       borderWidth: 2,
       borderRadius: 35,
-      borderColor: '#FFFFFF',
+      borderColor: '#111',
       marginHorizontal: 20,
     },
     cameraButtonInner: {
@@ -164,8 +181,8 @@ export default function CameraScreen({ onPictureTaken }) {
       height: 60,
       borderWidth: 2,
       borderRadius: 30,
-      borderColor: '#FFFFFF',
-      backgroundColor: '#FFFFFF',
+      borderColor: '#111',
+      backgroundColor: '#111',
       margin: 3,
     },
     capturedPhotoContainer: {
@@ -185,14 +202,24 @@ export default function CameraScreen({ onPictureTaken }) {
       height: Dimensions.get('window').height,
       width: Dimensions.get('window').width,
     },
-    button: {
-      flex: 1,
-      alignSelf: 'flex-end',
-      alignItems: 'center',
-    },
     text: {
       fontSize: 24,
       fontWeight: 'bold',
       color: 'white',
+      textAlign: 'center',
     },
+    button: {
+      borderRadius: 5,
+      backgroundColor: 'blue',
+      paddingHorizontal: 20,
+      paddingVertical: 10,
+      alignItems: 'center',
+    },
+    buttonText: {
+      color: 'white',
+      fontSize: 16,
+    },
+
+
   });
+  

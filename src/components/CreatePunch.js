@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'react-native';
 import moment from "moment";
+
 
 export default function CreatePunch({ pictureData, qrCodeData, idData, onDone }) {
   const [showAPIResult, setShowAPIResult] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showRejected, setShowRejected] = useState(false)  ;
+  const [showRejected, setShowRejected] = useState(false);
 
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [result, setResult] = useState({});
-
-  console.log('CreatePunch: ', pictureData, qrCodeData, idData);
+  const stopSign = require('../../assets/stopsign.png');
+  //console.log('CreatePunch: ', pictureData, qrCodeData, idData);
 
   useEffect(() => {
     console.log("useEffect");
@@ -18,7 +19,7 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
     /*  This is where you will make the API call */
     /*********************************************/
     const createPunch = async () => {
-      console.log('createPunch: ', pictureData, qrCodeData, idData);
+      // console.log('createPunch: ', pictureData, qrCodeData, idData);
       // let params = {
       //   "ClientDateTime": "", //"String content", //you should be able to leave this empty
       //   "ClientId": data.clientId, //from QR
@@ -52,12 +53,12 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
         "PunchClockId": "",
         "Image": pictureData.resizedPhoto.photo.base64,
       }
-      console.log(params);
+      //console.log(params);
 
 
       try {
         console.log("Calling API");
-        console.log(JSON.stringify(params));
+        //console.log(JSON.stringify(params));
         let res = await fetch('http://msiwebtrax.com/Api/MobilePunch', {
           method: 'POST',
           headers: {
@@ -68,38 +69,38 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
           body: JSON.stringify(params),
           // body: params
         });
-        console.log(res);
+        //console.log(res);
         let resText = await res.text();
         console.log(resText);
         let resj = JSON.parse(resText);
 
         console.log("HTTP Status :", res.ok, res.status);
-
-        const {Name, Success, Day } = resj;
+        const { Name, Message, Success, Day } = resj;
 
         console.log("Name", Name);
+        console.log("Message", Message);
         console.log("Success", Success);
         console.log("Day", Day);
 
-        let dateS = moment(date).format('MMM Do, YYYY');
-        let timeS = moment(date).format('h:mm a');
+        let dateS = moment().format('MMM Do, YYYY');
+        let timeS = moment().format('h:mm a');
         console.log("dateS", dateS);
         console.log("timeS", timeS);
 
-        let successS = Success  < 0 ? false : true;
+        let successS = Success < 0 ? false : true;
 
         setResult({
           success: successS,
           name: Name || "",
+          message: Message || "",
           day: Day,
           date: dateS,
           time: timeS
         })
 
         console.log(result);
-        // setShowCamera(false);
         console.log("result", result)
-        if(successS) {
+        if (successS) {
           setShowSuccess(true);
           setShowRejected(false);
         }
@@ -107,9 +108,6 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
           setShowSuccess(false)
           setShowRejected(true);
         }
-
-
-
       } catch (e) {
         console.error(e);
       }
@@ -123,58 +121,58 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
     createPunch();
   }, []);
 
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    dataContainer: {
-      paddingHorizontal: 20,
-    },
-    dataLabel: {
-      fontSize: 18,
-      fontWeight: 'bold',
-      marginBottom: 5,
-    },
-    dataText: {
-      fontSize: 16,
-    },
-  });
 
   return (
     <View style={styles.container}>
       {showAPIResult && (
         <View style={styles.container}>
           {showSuccess && (
-            <View style={{ flex: 1, backgroundColor: 'lightgreen', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>Success</Text>
+            <View style={
+              {
+                height: Dimensions.get('window').height,
+                width: Dimensions.get('window').width,
+                flex: 1, width: '100%', backgroundColor: 'lightgreen',
+                alignItems: 'center', justifyContent: 'center'
+              }}>
+              <Text style={{ fontSize: 48, fontWeight: 'bold', marginBottom: 10 }}>Success</Text>
               <Text style={styles.fullName}>{result.name}</Text>
               <Text style={styles.date}>{result.date}</Text>
               <Text style={styles.time}>{result.time}</Text>
               <View style={{ justifyContent: 'center', borderColor: 'red', alignItems: 'flex-end', margin: 30 }}>
                 <TouchableOpacity
                   style={{ alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
-                  onPress={startOver}>
-                    </TouchableOpacity>
-                    </View>
+                  onPress={() => {
+                    console.log("startOver");
+                    onDone(); // Call the OnDone reference
+                  }}
+                >
+                  <Text>Done</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
           )}
 
           {showRejected && (
-            <View style={{ flex: 1, backgroundColor: '#FF7276', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>Not Authorized</Text>
+            <View style={
+              { flex: 1, backgroundColor: '#FF7276', alignItems: 'center', justifyContent: 'center' }
+            }>
+              <View >
+                <Image style={{backgroundColor:"transparent"}} source={stopSign} />
+              </View>
+              <Text style={{textAlign:'center', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{result.message}</Text>
               <Text style={styles.fullName}>{result.name}</Text>
               <Text style={styles.date}>{result.date}</Text>
               <Text style={styles.time}>{result.time}</Text>
               <View style={{ justifyContent: 'center', borderColor: 'red', alignItems: 'flex-end', margin: 30 }}>
-
                 <TouchableOpacity
                   style={{ alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
-                  onPress={startOver}>
-
-                  <Ionicons name="refresh-circle" size={24} style={{ margin: 2 }} /><Text >Restart</Text>
+                  onPress={() => {
+                    console.log("startOver");
+                    onDone(); // Call the OnDone reference
+                  }}
+                >
+                  <Text>Done</Text>
                 </TouchableOpacity>
               </View>
 
@@ -185,3 +183,51 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
     </View>
   );
 }
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+  },
+  buttonContainer: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    flexDirection: 'row',
+    margin: 20,
+    marginBottom: 40,
+    justifyContent: 'center'
+  },
+  button: {
+
+    alignSelf: 'flex-end',
+    alignItems: 'center',
+    flexDirection: 'row'
+  },
+  text: {
+    fontSize: 18,
+    color: 'blue',
+  },
+  captureButton: {
+    alignSelf: 'flex-end',
+
+  },
+
+  fullName: {
+    fontSize: 18,
+    fontWeight: '900',
+    marginBottom: 10,
+  },
+  date: {
+    fontSize: 14,
+    fontWeight: '600',
+
+    marginBottom: 2,
+  },
+  time: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+});
+
+
