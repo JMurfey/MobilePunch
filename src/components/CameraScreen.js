@@ -96,7 +96,7 @@ export default function CameraScreen({ onPictureTaken }) {
     }
     else {
       console.log('permission', permission);
-      console.log('Permission to access camera was denied');
+      console.log('Permission is null or permission to access camera was denied');
     }
   }, [permission]);
 
@@ -138,7 +138,6 @@ export default function CameraScreen({ onPictureTaken }) {
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      marginBottom: 20,      
     },
     cameraContainer: {
       flex: 1,
