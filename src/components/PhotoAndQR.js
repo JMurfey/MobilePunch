@@ -6,32 +6,28 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import WaitOverlay from './WaitOverlay';
 
 
-export default function CameraScreen({ onPictureTaken }) {
+export default function PhotoAndQR({ onPhotoAndQRTaken }) {
   const cameraRef = useRef(null);
   const [permission, requestPermission] = Camera.useCameraPermissions();
   const [isCameraInitialized, setIsCameraInitialized] = useState(false);
-  const [location, setLocation] = useState(null);
   const [type, setType] = useState(CameraType.front);
   const handleCameraReady = useCallback(() => setIsCameraInitialized(true), []);
-  const [isWaiting, setIsWaiting] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(true);
+  const [pictureInfo, setPictureInfo] = useState(null);
 
   async function resizeImage(pictureData) {
     // Get the image URI
     const uri = pictureData.photo.uri;
-  
     // Get the image dimensions
     const { width, height } = pictureData.photo;
-  
     // Calculate the new dimensions while maintaining aspect ratio
     const newWidth = 120;
     const newHeight = Math.round((newWidth * height) / width);
-  
     // Resize the image
     const resizedImage = await ImageManipulator.manipulateAsync(uri, [
       { resize: { width: newWidth, height: newHeight}}
     ]);
     console.log("resizedImage: ", pictureData.photo.uri);
-    console.log("resizedImage: ", resizedImage.uri);
 
   // Get the base64 representation of the resized image
   const base64Image = await ImageManipulator.manipulateAsync(
@@ -40,10 +36,8 @@ export default function CameraScreen({ onPictureTaken }) {
     { base64: true }
   );
 
-    console.log(base64Image);
-      // Return a new object containing the resized image data and its base64 representation
+  // Return a new object containing the resized image data and its base64 representation
     return {
-      location: pictureData.location,
       photo: {
         uri: resizedImage.uri,
         width: resizedImage.width,
@@ -54,15 +48,21 @@ export default function CameraScreen({ onPictureTaken }) {
   }
   
   const handleTakePicture = async () => {
+    console.log('handleTakePicture');
     if (isCameraInitialized) {
       setIsWaiting(true);
       if (cameraRef.current) {
         try {
           const photo = await cameraRef.current.takePictureAsync();
-          const resizedPhoto = await resizeImage({ photo });
           try {
+            setIsWaiting(true);
             const location = await Location.getCurrentPositionAsync({});
-            onPictureTaken({ resizedPhoto, location });
+            const resizedPhoto = await resizeImage({ photo });
+
+            setPictureInfo({
+              Photo: resizedPhoto.photo,
+              Location: location,
+            });
           } catch (error) {
             console.log(error);
           }
@@ -75,6 +75,32 @@ export default function CameraScreen({ onPictureTaken }) {
     }
   };
 
+  const handleBarCodeScanned = (barCodeData) => {
+    console.log("barCodeData: ", barCodeData);
+    /* TODO: add attribute barcode to pictureInfo */
+    setPictureInfo({
+      Location: pictureInfo.Location,
+      Photo: pictureInfo.Photo,
+      Barcode: barCodeData,
+    })
+  };
+
+  useEffect(() => {
+    (async () => {
+      //console.log('useEffect', pictureInfo);
+      if( pictureInfo === null ) {
+        setType(CameraType.front);
+      }
+      else if( pictureInfo.Barcode === null || pictureInfo.Barcode === undefined ) {
+        setType(CameraType.back);
+      }
+      else {
+        console.log('pictureInfo', pictureInfo);
+        onPhotoAndQRTaken(pictureInfo);
+      }
+    })();
+  }, [pictureInfo]);
+
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -84,8 +110,8 @@ export default function CameraScreen({ onPictureTaken }) {
         return;
       } else {
         console.log('Permission to access location was granted');
-        const location = await Location.getCurrentPositionAsync({});
-        setLocation(location);
+        //const location = await Location.getCurrentPositionAsync({});
+        //setLocation(location);
       }
     })();
   }, []);
@@ -99,6 +125,7 @@ export default function CameraScreen({ onPictureTaken }) {
       console.log('Permission is null or permission to access camera was denied');
     }
   }, [permission]);
+  
 
   if (!permission) {
     // Camera permissions are still loading
@@ -116,23 +143,31 @@ export default function CameraScreen({ onPictureTaken }) {
       </View>
     );
   }
-  
-  return (
-    <View style={styles.cameraContainer}>
-      <Camera
-        style={styles.cameraPreview}
-        onCameraReady={handleCameraReady}
-        type={type}
-        ref={cameraRef}
-      />
-      <View style={styles.cameraButtonContainer}>
-        <TouchableOpacity style={styles.cameraButton} onPress={handleTakePicture}>
-          <View style={styles.cameraButtonInner} />
-        </TouchableOpacity>
+
+  return (    
+      <View style={styles.cameraContainer}>
+        {console.log('isWaiting', isWaiting)}
+        <Camera
+          style={styles.cameraPreview}
+          onCameraReady={handleCameraReady}
+          type={type}
+          ref={cameraRef}
+          onBarCodeScanned={handleBarCodeScanned}
+        />
+        { type === CameraType.front ? (        
+        <View style={styles.cameraButtonContainer}>
+          <TouchableOpacity style={styles.cameraButton} onPress={handleTakePicture}>
+            <View style={styles.cameraButtonInner} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.bottomContainer}>
+          <Text style={styles.text}>Scan a QR code</Text>
+        </View>
+      )}
       </View>
-      <WaitOverlay visible={isWaiting} />
-    </View>
   );
+    
 }
   /* styles */
   const styles = StyleSheet.create({

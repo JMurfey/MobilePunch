@@ -37,6 +37,8 @@ export default function QRScannerScreen({ onQRCodeScanned }) {
     }, 30000);
   };
 
+/* permission granted in CameraScreen.js */
+/*
   if (hasPermission === null) {
     return <Text>Requesting for camera permission</Text>;
   }
@@ -44,9 +46,10 @@ export default function QRScannerScreen({ onQRCodeScanned }) {
     return <Text>No access to camera</Text>;
   }
   else {
+    cameraRef.current.showCamera(true);    
     startTimer();
-    
   }
+*/
 
   const styles = StyleSheet.create({
     container: {
@@ -65,7 +68,6 @@ export default function QRScannerScreen({ onQRCodeScanned }) {
       color: '#ffffff',
     },
   });
-
 
   return (
     <View style={styles.container}>

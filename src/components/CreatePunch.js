@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Dimensions, Image } from 'rea
 import moment from "moment";
 
 
-export default function CreatePunch({ pictureData, qrCodeData, idData, onDone }) {
+export default function CreatePunch({ captureData, idData, onDone }) {
   const [showAPIResult, setShowAPIResult] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showRejected, setShowRejected] = useState(false);
@@ -11,10 +11,12 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
   const [currentDateTime, setCurrentDateTime] = useState('');
   const [result, setResult] = useState({});
   const stopSign = require('../../assets/stopsign.png');
-  //console.log('CreatePunch: ', pictureData, qrCodeData, idData);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  console.log('CreatePunch: ', captureData, idData, onDone);
 
   useEffect(() => {
-    console.log("useEffect");
+    console.log("useEffect", captureData);
     /*********************************************/
     /*  This is where you will make the API call */
     /*********************************************/
@@ -34,31 +36,33 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
       //   "PunchClockId": "", //"String content", // from QR, not used at the moment
       //   }
       // replace "Image": imageBase64 below for actual image
-      let currentDateTime = moment().valueOf();
-      console.log('currentDateTime: ', currentDateTime);
+      setCurrentDateTime(moment().valueOf());
 
-
-
-
+      if (captureData.QrData == null || captureData.QrData == undefined ||
+        captureData.QrData.ClientId == null || captureData.QrData.ClientId == undefined) {
+        console.log('QR Code is invalid');
+        setErrorMsg("QR Code Invalid");
+      }
+      else if (captureData.QrData.ClientDateTime - currentDateTime > 60000) {
+        console.log('QR Code is expired');
+        setErrorMsg("QR Code Expired");
+      }
       let params = {
         "ClientDateTime": currentDateTime,
-        "ClientId": "165",
+        "ClientId": captureData.QrData.ClientId,
         "DepartmentId": "",
         "Id": idData,
         "LocationId": "",
         "PhoneDateTime": currentDateTime,
-        "PhoneLatitude": pictureData.location.coords.latitude,
-        "PhoneLongitude": pictureData.location.coords.longitude,
+        "PhoneLatitude": captureData.Location.coords.latitude,
+        "PhoneLongitude": captureData.Location.coords.longitude,
         "PhoneNum": "1234321234",
         "PunchClockId": "",
-        "Image": pictureData.resizedPhoto.photo.base64,
+        "Image": captureData.ResizedImage.base64,
       }
-      //console.log(params);
-
 
       try {
         console.log("Calling API");
-        //console.log(JSON.stringify(params));
         let res = await fetch('http://msiwebtrax.com/Api/MobilePunch', {
           method: 'POST',
           headers: {
@@ -122,65 +126,86 @@ export default function CreatePunch({ pictureData, qrCodeData, idData, onDone })
   }, []);
 
 
+
   return (
-    <View style={styles.container}>
-      {showAPIResult && (
-        <View style={styles.container}>
-          {showSuccess && (
-            <View style={
-              {
-                height: Dimensions.get('window').height,
-                width: Dimensions.get('window').width,
-                flex: 1, width: '100%', backgroundColor: 'lightgreen',
-                alignItems: 'center', justifyContent: 'center'
-              }}>
-              <Text style={{ fontSize: 48, fontWeight: 'bold', marginBottom: 10 }}>Success</Text>
-              <Text style={styles.fullName}>{result.name}</Text>
-              <Text style={styles.date}>{result.date}</Text>
-              <Text style={styles.time}>{result.time}</Text>
-              <View style={{ justifyContent: 'center', borderColor: 'red', alignItems: 'flex-end', margin: 30 }}>
-                <TouchableOpacity
-                  style={{ alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
-                  onPress={() => {
-                    console.log("startOver");
-                    onDone(); // Call the OnDone reference
-                  }}
-                >
-                  <Text>Done</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-          )}
-
-          {showRejected && (
-            <View style={
-              { flex: 1, backgroundColor: '#FF7276', alignItems: 'center', justifyContent: 'center' }
-            }>
-              <View >
-                <Image style={{backgroundColor:"transparent"}} source={stopSign} />
-              </View>
-              <Text style={{textAlign:'center', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{result.message}</Text>
-              <Text style={styles.fullName}>{result.name}</Text>
-              <Text style={styles.date}>{result.date}</Text>
-              <Text style={styles.time}>{result.time}</Text>
-              <View style={{ justifyContent: 'center', borderColor: 'red', alignItems: 'flex-end', margin: 30 }}>
-                <TouchableOpacity
-                  style={{ alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
-                  onPress={() => {
-                    console.log("startOver");
-                    onDone(); // Call the OnDone reference
-                  }}
-                >
-                  <Text>Done</Text>
-                </TouchableOpacity>
-              </View>
-
-            </View>
-          )}
+    (errorMsg.length > 0) ? (
+      <View style={{ flex: 1, backgroundColor: '#FF7276', alignItems: 'center', justifyContent: 'center' }}>
+        <View >
+          <Text style={{ justifyContent: 'center', borderColor: 'red', alignItems: 'flex-end', margin: 30,
+          fontSize: 48, fontWeight: 'bold', color: 'black', padding: 10, borderRadius: 10, justifyContent: 'center',
+          textAlign: 'center'
+           }}>{errorMsg}</Text>
+          <TouchableOpacity
+            style={{ alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+            onPress={() => {
+              console.log("startOver");
+              onDone(); // Call the OnDone reference
+            }}
+          >
+            <Text>Done</Text>
+          </TouchableOpacity>
         </View>
-      )}
-    </View>
+      </View>
+    ) : (
+      <View style={styles.container}>
+        {showAPIResult && (
+          <View style={styles.container}>
+            {showSuccess && (
+              <View style={
+                {
+                  height: Dimensions.get('window').height,
+                  width: Dimensions.get('window').width,
+                  flex: 1, width: '100%', backgroundColor: 'lightgreen',
+                  alignItems: 'center', justifyContent: 'center'
+                }}>
+                <Text style={{ fontSize: 48, fontWeight: 'bold', marginBottom: 10 }}>Success</Text>
+                <Text style={styles.fullName}>{result.name}</Text>
+                <Text style={styles.date}>{result.date}</Text>
+                <Text style={styles.time}>{result.time}</Text>
+                <View style={{ justifyContent: 'center', borderColor: 'red', alignItems: 'flex-end', margin: 30 }}>
+                  <TouchableOpacity
+                    style={{ alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                    onPress={() => {
+                      console.log("startOver");
+                      onDone(); // Call the OnDone reference
+                    }}
+                  >
+                    <Text>Done</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+            )}
+
+            {showRejected && (
+              <View style={
+                { flex: 1, backgroundColor: '#FF7276', alignItems: 'center', justifyContent: 'center' }
+              }>
+                <View >
+                  <Image style={{ backgroundColor: "transparent" }} source={stopSign} />
+                </View>
+                <Text style={{ textAlign: 'center', fontSize: 24, fontWeight: 'bold', marginBottom: 10 }}>{result.message}</Text>
+                <Text style={styles.fullName}>{result.name}</Text>
+                <Text style={styles.date}>{result.date}</Text>
+                <Text style={styles.time}>{result.time}</Text>
+                <View style={{ justifyContent: 'center', borderColor: 'red', alignItems: 'flex-end', margin: 30 }}>
+                  <TouchableOpacity
+                    style={{ alignSelf: 'center', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                    onPress={() => {
+                      console.log("startOver");
+                      onDone(); // Call the OnDone reference
+                    }}
+                  >
+                    <Text>Done</Text>
+                  </TouchableOpacity>
+                </View>
+
+              </View>
+            )}
+          </View>
+        )}
+      </View>
+    )
   );
 }
 const styles = StyleSheet.create({

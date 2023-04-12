@@ -4,13 +4,13 @@ import { View, ActivityIndicator, StyleSheet,Dimensions } from 'react-native';
 const WaitOverlay = ({ visible }) => {
     const { width } = Dimensions.get('window');
     const size = width / 2;
-
     if (!visible) {
     return null;
   }
 
   return (
     <View style={styles.overlay}>
+      {console.log('size', size)}
       <View style={styles.container}>
         <ActivityIndicator size={size} color="#ffffff" />
       </View>
