@@ -21,7 +21,7 @@ export default function CreatePunch({ captureData, idData, onDone }) {
 
   async function createPunch(params) {
     try {
-      console.log("Calling API");
+      console.log("Calling API: " + params);
       let res = await fetch("http://msiwebtrax.com/Api/MobilePunch", {
         method: "POST",
         headers: {
@@ -73,31 +73,18 @@ export default function CreatePunch({ captureData, idData, onDone }) {
     } catch (e) {
       console.error(e);
     }
+    setShowAPIResult(true);
   }
 
+  /* get current time to compare against time from QR code */
   useEffect(() => {
     console.log("useEffect");
-
-    const validateData = async () => {
-      // console.log('createPunch: ', pictureData, qrCodeData, idData);
-      //    data from API endpoint
-      // let params = {
-      //   "ClientDateTime": "", //"String content", //you should be able to leave this empty
-      //   "ClientId": data.clientId, //from QR
-      //   "DepartmentId": "530", //from QR, not necessary
-      //   "Id":  idInput, //"String content", //Stored ID
-      //   "Image": imageBase64,//"String content", //b64 of image
-      //   "LocationId": data.LocationId, //"String content", //from QR
-      //   "PhoneDateTime": currentDateTime, //"String content", //long data - # of milliseconds since 1970
-      //   "PhoneLatitude": data.Lattitude,  //"String content", // This will probably come from QR
-      //   "PhoneLongitude": data.Logitude, //"String content", // This will probably come from QR
-      //   "PhoneNum": "", //"String content", // Phone Number, not used at the moment
-      //   "PunchClockId": "", //"String content", // from QR, not used at the moment
-      //   }
-      // replace "Image": imageBase64 below for actual image
-
+    if (currentDateTime == null || currentDateTime.length == 0) {
       setCurrentDateTime(moment().valueOf());
-
+      return;
+    }
+    console.log("In UseEffect, currentDateTime: ", currentDateTime);
+    const validateData = async () => {
       /* TODO: this code should be run when the QR code is captured, in the 
           PhotoAndQR.js component */
       const dataString = captureData.QrData.data;
@@ -107,7 +94,6 @@ export default function CreatePunch({ captureData, idData, onDone }) {
       );
       captureData.QrData.data = JSON.parse(modifiedDataString);
 
-      console.log("Capture Data: ", captureData.QrData.data);
       console.log(captureData.QrData.data.ClientID);
       console.log(captureData.QrData.data.DateTime);
 
@@ -130,9 +116,10 @@ export default function CreatePunch({ captureData, idData, onDone }) {
         console.log("QR Code is expired");
         setErrorMsg("QR Code Expired");
       } else {
+        console.log("Here is the clientID: ", captureData.QrData.data.ClientID);
         let params = {
-          ClientDateTime: currentDateTime,
-          ClientId: captureData.QrData.ClientId,
+          ClientDateTime: captureData.QrData.data.DateTime,
+          ClientId: captureData.QrData.data.ClientID,
           DepartmentId: "",
           Id: idData,
           LocationId: "",
@@ -143,11 +130,10 @@ export default function CreatePunch({ captureData, idData, onDone }) {
           PunchClockId: "",
           Image: captureData.ResizedImage.base64,
         };
+        params = JSON.stringify(params);
+        console.log("params AFTER stringify: " + params);
         createPunch(params);
       }
-      setShowAPIResult(true);
-      //setShowProcessing(false);
-      //setShowCamera(false);
       return true;
     };
     validateData();
