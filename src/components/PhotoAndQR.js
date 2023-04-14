@@ -84,6 +84,8 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
   const handleBarCodeScanned = (barCodeData) => {
     //console.log("barCodeData: ", barCodeData);
     /* TODO: add attribute barcode to pictureInfo */
+    barCodeData = JSON.parse(barCodeData.data);
+    console.log("barCodeData: ", barCodeData);
     setPictureInfo({
       Location: pictureInfo.Location,
       Photo: pictureInfo.Photo,

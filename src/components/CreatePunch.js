@@ -25,16 +25,22 @@ export default function CreatePunch({ captureData, idData, onDone }) {
       let res = await fetch("http://msiwebtrax.com/Api/MobilePunch", {
         method: "POST",
         headers: {
-          Accept: "*/*",
+          "Accept": "application/json",
           "Content-Type": "application/json",
-          Cookie: "ASP.NET_SessionId=plhoe3jdaw2dtengknpcbfra",
+          "Cookie": "ASP.NET_SessionId=plhoe3jdaw2dtengknpcbfra",
         },
-        body: JSON.stringify(params),
-        // body: params
+        //body: JSON.stringify({"ClientDateTime": 12341343414, "": }),
+        body: params
       });
       //console.log(res);
+      if( res.status != 200 ) {
+        setErrorMsg("Error: " + res.status);
+        return;
+      }
+
+      //console.log("This is data returned from server: ", res);
       let resText = await res.text();
-      console.log(resText);
+      console.log("This is text returned from server: ", resText);
       let resj = JSON.parse(resText);
 
       console.log("HTTP Status :", res.ok, res.status);
@@ -84,51 +90,50 @@ export default function CreatePunch({ captureData, idData, onDone }) {
       return;
     }
     console.log("In UseEffect, currentDateTime: ", currentDateTime);
+
+    console.log("QR: ", captureData.QrData);
     const validateData = async () => {
       /* TODO: this code should be run when the QR code is captured, in the 
           PhotoAndQR.js component */
-      const dataString = captureData.QrData.data;
-      const modifiedDataString = dataString.replace(
-        /([a-zA-Z]+)(:)/g,
-        '"$1"$2'
-      );
-      captureData.QrData.data = JSON.parse(modifiedDataString);
-
-      console.log(captureData.QrData.data.ClientID);
-      console.log(captureData.QrData.data.DateTime);
+      //const dataString = captureData.QrData.data;
+      //const modifiedDataString = dataString.replace(
+      //  /([a-zA-Z]+)(:)/g,
+      //  '"$1"$2'
+      //);
+      //captureData.QrData.data = JSON.parse(modifiedDataString);
 
       if (
         captureData.QrData === null ||
         captureData.QrData === undefined ||
-        captureData.QrData.data === null ||
-        captureData.QrData.data === undefined ||
-        captureData.QrData.data.ClientID === null ||
-        captureData.QrData.data.ClientID === undefined
+        captureData.QrData.clientID === null ||
+        captureData.QrData.clientID === undefined || 
+        captureData.QrData.datetime === null ||
+        captureData.QrData.datetime === undefined
       ) {
-        console.log("QR Code is invalid: ", captureData.QrData.data);
+        console.log("QR Code is invalid: ", captureData.QrData);
         setErrorMsg("QR Code Invalid");
       } else if (
-        captureData.QrData.data.DateTime - currentDateTime.valueOf() >
-        6000000
+        Math.abs(captureData.QrData.datetime - currentDateTime.valueOf()) >
+        2000
       ) {
         console.log(currentDateTime);
-        console.log(captureData.QrData.data.DateTime);
+        console.log(captureData.QrData.datetime);
         console.log("QR Code is expired");
         setErrorMsg("QR Code Expired");
       } else {
-        console.log("Here is the clientID: ", captureData.QrData.data.ClientID);
+        //console.log("Time difference: ", captureData.QrData.datetime - currentDateTime.valueOf());
         let params = {
-          ClientDateTime: captureData.QrData.data.DateTime,
-          ClientId: captureData.QrData.data.ClientID,
-          DepartmentId: "",
-          Id: idData,
-          LocationId: "",
-          PhoneDateTime: currentDateTime,
-          PhoneLatitude: captureData.Location.coords.latitude,
-          PhoneLongitude: captureData.Location.coords.longitude,
-          PhoneNum: "1234321234",
-          PunchClockId: "",
-          Image: captureData.ResizedImage.base64,
+          "ClientDateTime": captureData.QrData.datetime,
+          "ClientId": captureData.QrData.clientID,
+          "DepartmentId": "",
+          "Id": idData,
+          "LocationId": "",
+          "PhoneDateTime": currentDateTime,
+          "PhoneLatitude": captureData.Location.coords.latitude,
+          "PhoneLongitude": captureData.Location.coords.longitude,
+          "PhoneNum": "1234321234",
+          "PunchClockId": "",
+          "Image": captureData.ResizedImage.base64,
         };
         params = JSON.stringify(params);
         console.log("params AFTER stringify: " + params);
