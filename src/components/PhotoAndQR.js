@@ -5,8 +5,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  Image,
   Button,
 } from "react-native";
+import portraitOverlay from "../../assets/stopsign.png";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Camera, CameraType } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -18,7 +20,7 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
   const [isCameraInitialized, setIsCameraInitialized] = useState(false);
   const [type, setType] = useState(CameraType.front);
   const handleCameraReady = useCallback(() => setIsCameraInitialized(true), []);
-  const [isWaiting, setIsWaiting] = useState(true);
+  const [showWaitOverlay, setShowWaitOverlay] = useState(false);
   const [pictureInfo, setPictureInfo] = useState(null);
 
   async function resizeImage(pictureData) {
@@ -56,12 +58,11 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
   const handleTakePicture = async () => {
     console.log("handleTakePicture");
     if (isCameraInitialized) {
-      setIsWaiting(true);
+      setShowWaitOverlay(true);
       if (cameraRef.current) {
         try {
           const photo = await cameraRef.current.takePictureAsync();
           try {
-            setIsWaiting(true);
             const location = await Location.getCurrentPositionAsync({});
             const resizedPhoto = await resizeImage({ photo });
 
@@ -83,7 +84,6 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
 
   const handleBarCodeScanned = (barCodeData) => {
     //console.log("barCodeData: ", barCodeData);
-    /* TODO: add attribute barcode to pictureInfo */
     barCodeData = JSON.parse(barCodeData.data);
     console.log("barCodeData: ", barCodeData);
     setPictureInfo({
@@ -103,6 +103,7 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
         pictureInfo.Barcode === undefined
       ) {
         setType(CameraType.back);
+        setShowWaitOverlay(false); // Add this line        
       } else {
         //console.log('pictureInfo', pictureInfo);
         onPhotoAndQRTaken(pictureInfo);
@@ -160,14 +161,22 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
 
   return (
     <View style={styles.cameraContainer}>
-      {console.log("isWaiting", isWaiting)}
       <Camera
         style={styles.cameraPreview}
         onCameraReady={handleCameraReady}
         type={type}
         ref={cameraRef}
         onBarCodeScanned={handleBarCodeScanned}
-      />
+        androidZOrder="background" // Add this line        
+      /> 
+      {type === CameraType.front && (
+        <Image
+        source={portraitOverlay}
+        style={styles.portraitOverlay}
+        resizeMode="contain"
+      /> 
+      )}
+      <WaitOverlay visible={showWaitOverlay} />
       {type === CameraType.front ? (
         <View style={styles.cameraButtonContainer}>
           <TouchableOpacity
@@ -202,7 +211,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: Dimensions.get("window").height - 100, // subtracting 100 to make space for the button container
     width: Dimensions.get("window").width, // reducing the width by 40 for a border
-    marginTop: 100, // adding a margin of 100 to the camera preview
+    marginTop: 50, // adding a margin of 100 to the camera preview
     borderRadius: 10, // adding rounded corners to the camera preview
     borderWidth: 2, // adding a border to the camera preview
     borderColor: "black", // setting the border color to white
@@ -223,7 +232,7 @@ const styles = StyleSheet.create({
     height: 70,
     borderWidth: 2,
     borderRadius: 35,
-    borderColor: "#111",
+    borderColor: "#FFF",
     marginHorizontal: 20,
   },
   cameraButtonInner: {
@@ -231,8 +240,8 @@ const styles = StyleSheet.create({
     height: 60,
     borderWidth: 2,
     borderRadius: 30,
-    borderColor: "#111",
-    backgroundColor: "#111",
+    borderColor: "#FFF",
+    backgroundColor: "#FFF",
     margin: 3,
   },
   capturedPhotoContainer: {
@@ -269,4 +278,13 @@ const styles = StyleSheet.create({
     color: "white",
     fontSize: 16,
   },
+  portraitOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+  },  
 });
