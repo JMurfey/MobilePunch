@@ -96,10 +96,11 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
 
   const handleBarCodeScanned = (barCodeData) => {
     console.log("barCodeData: ", barCodeData);
-    if (isJsonString(barCodeData)) {
+    if (isJsonString(barCodeData.data)) {
       barCodeData = JSON.parse(barCodeData.data);
       console.log("barCodeData: ", barCodeData);
     } else {
+      console.log("Not barcode data!");
       barCodeData = {};
     }
     setPictureInfo({

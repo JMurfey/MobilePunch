@@ -28,7 +28,7 @@ export default function App() {
       Location: info.Location,
       QrData: info.Barcode,
     });
-    //console.log('handlePhotoAndQRTaken: ', info);
+    console.log("handlePhotoAndQRTaken: ", info);
     setShowCamera(false);
     setShowCreatePunch(true);
   };
