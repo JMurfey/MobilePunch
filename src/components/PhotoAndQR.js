@@ -8,7 +8,8 @@ import {
   Image,
   Button,
 } from "react-native";
-import portraitOverlay from "../../assets/stopsign.png";
+import portraitOverlay from "../../assets/PortraitTemplate.png";
+import qrOverlay from "../../assets/QROverlay.png";
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Camera, CameraType } from "expo-camera";
 import * as ImageManipulator from "expo-image-manipulator";
@@ -19,7 +20,9 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
   const [permission, requestPermission] = Camera.useCameraPermissions();
   const [isCameraInitialized, setIsCameraInitialized] = useState(false);
   const [type, setType] = useState(CameraType.front);
+  const [remainingTime, setRemainingTime] = useState(0);
   const handleCameraReady = useCallback(() => setIsCameraInitialized(true), []);
+
   const [showWaitOverlay, setShowWaitOverlay] = useState(false);
   const [pictureInfo, setPictureInfo] = useState(null);
 
@@ -55,6 +58,15 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
     };
   }
 
+  function isJsonString(str) {
+    try {
+      JSON.parse(str);
+    } catch (e) {
+      return false;
+    }
+    return true;
+  }
+
   const handleTakePicture = async () => {
     console.log("handleTakePicture");
     if (isCameraInitialized) {
@@ -83,9 +95,13 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
   };
 
   const handleBarCodeScanned = (barCodeData) => {
-    //console.log("barCodeData: ", barCodeData);
-    barCodeData = JSON.parse(barCodeData.data);
     console.log("barCodeData: ", barCodeData);
+    if (isJsonString(barCodeData)) {
+      barCodeData = JSON.parse(barCodeData.data);
+      console.log("barCodeData: ", barCodeData);
+    } else {
+      barCodeData = {};
+    }
     setPictureInfo({
       Location: pictureInfo.Location,
       Photo: pictureInfo.Photo,
@@ -95,7 +111,6 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
 
   useEffect(() => {
     (async () => {
-      //console.log('useEffect', pictureInfo);
       if (pictureInfo === null) {
         setType(CameraType.front);
       } else if (
@@ -103,9 +118,30 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
         pictureInfo.Barcode === undefined
       ) {
         setType(CameraType.back);
-        setShowWaitOverlay(false); // Add this line        
+        setRemainingTime(30); // Reset the remaining time
+        // Add a 2-second delay before setting showWaitIndicator to false
+        const timerStopWaitIndicator = setTimeout(() => {
+          setShowWaitOverlay(false);
+        }, 1000);
+
+        // Timer to update remaining time
+        const timerUpdateRemainingTime = setInterval(() => {
+          setRemainingTime((prevRemainingTime) => {
+            if (prevRemainingTime <= 1) {
+              clearInterval(timerUpdateRemainingTime);
+              setType(CameraType.front); // Set the camera to front
+              setPictureInfo(null); // Clear the pictureInfo
+              return 0;
+            }
+            return prevRemainingTime - 1;
+          });
+        }, 1000);
+
+        return () => {
+          clearTimeout(timerStopWaitIndicator);
+          clearInterval(timerUpdateRemainingTime); // Clear the interval when the component unmounts
+        };
       } else {
-        //console.log('pictureInfo', pictureInfo);
         onPhotoAndQRTaken(pictureInfo);
       }
     })();
@@ -167,14 +203,21 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
         type={type}
         ref={cameraRef}
         onBarCodeScanned={handleBarCodeScanned}
-        androidZOrder="background" // Add this line        
-      /> 
+        androidZOrder="background" // Add this line
+      />
       {type === CameraType.front && (
         <Image
-        source={portraitOverlay}
-        style={styles.portraitOverlay}
-        resizeMode="contain"
-      /> 
+          source={portraitOverlay}
+          style={styles.portraitOverlay}
+          resizeMode="contain"
+        />
+      )}
+      {type === CameraType.back && (
+        <Image
+          source={qrOverlay}
+          style={styles.qrOverlay}
+          resizeMode="stretch"
+        />
       )}
       <WaitOverlay visible={showWaitOverlay} />
       {type === CameraType.front ? (
@@ -188,7 +231,8 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
         </View>
       ) : (
         <View style={styles.bottomContainer}>
-          <Text style={styles.text}>Scan a QR code</Text>
+          <Text style={styles.text}>Scan QR Punch Clock</Text>
+          <Text style={styles.countDownText}>{remainingTime}</Text>
         </View>
       )}
     </View>
@@ -263,6 +307,14 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 24,
+    paddingTop: 10,
+    fontWeight: "bold",
+    color: "white",
+    textAlign: "center",
+  },
+  countDownText: {
+    fontSize: 36,
+    paddingTop: 10,
     fontWeight: "bold",
     color: "white",
     textAlign: "center",
@@ -279,12 +331,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   portraitOverlay: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    width: '100%',
-    height: '100%',
-  },  
+    width: "100%",
+    height: "100%",
+  },
+  qrOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: "100%",
+    height: "100%",
+  },
+  bottomContainer: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: "15%",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  },
 });
