@@ -22,17 +22,16 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
   const [type, setType] = useState(CameraType.front);
   const [remainingTime, setRemainingTime] = useState(0);
   const handleCameraReady = useCallback(() => setIsCameraInitialized(true), []);
-
   const [showWaitOverlay, setShowWaitOverlay] = useState(false);
   const [pictureInfo, setPictureInfo] = useState(null);
 
-  async function resizeImage(pictureData) {
+  async function resizeImage(pictureData, resizeFactor = 1) {
     // Get the image URI
     const uri = pictureData.photo.uri;
     // Get the image dimensions
     const { width, height } = pictureData.photo;
     // Calculate the new dimensions while maintaining aspect ratio
-    const newWidth = 120;
+    const newWidth = 120 * resizeFactor;
     const newHeight = Math.round((newWidth * height) / width);
     // Resize the image
     const resizedImage = await ImageManipulator.manipulateAsync(uri, [
@@ -76,12 +75,35 @@ export default function PhotoAndQR({ onPhotoAndQRTaken }) {
           const photo = await cameraRef.current.takePictureAsync();
           try {
             const location = await Location.getCurrentPositionAsync({});
-            const resizedPhoto = await resizeImage({ photo });
 
-            setPictureInfo({
-              Photo: resizedPhoto.photo,
-              Location: location,
-            });
+            let resizeFactor = 1;
+            let success = false;
+            let resizedPhoto;
+
+            while (!success && resizeFactor > 0) {
+              try {
+                resizedPhoto = await resizeImage({ photo }, resizeFactor);
+                // Here, try uploading the resized image and check for error 413.
+                // If there is no error, set success to true.
+                success = true;
+              } catch (error) {
+                if (error.status === 413) {
+                  // If the error is 413, reduce the resize factor and try again.
+                  resizeFactor -= 0.1;
+                } else {
+                  throw error;
+                }
+              }
+            }
+
+            if (success) {
+              setPictureInfo({
+                Photo: resizedPhoto.photo,
+                Location: location,
+              });
+            } else {
+              console.log("Failed to upload image after multiple attempts");
+            }
           } catch (error) {
             console.log(error);
           }
